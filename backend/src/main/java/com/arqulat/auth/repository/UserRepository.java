@@ -1,11 +1,11 @@
-package in.neuarc.auth.repository;
+package com.arqulat.auth.repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import in.neuarc.auth.model.User;
+import com.arqulat.auth.model.User;
 
 public interface UserRepository extends JpaRepository<User, UUID>{
 	

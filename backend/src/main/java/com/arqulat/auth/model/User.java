@@ -1,4 +1,4 @@
-package in.neuarc.auth.model;
+package com.arqulat.auth.model;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
@@ -27,8 +28,11 @@ public class User {
 	@Column(updatable = false,nullable = false)
 	private UUID id;
 	
-	@Column(unique = true,nullable = false)
+	@Column(unique = true, nullable = false)
 	private String email;
+
+	@Column(name = "name")
+	private String name;
 	
 	@Column(name = "password_hash")
 	private String passwordHash;
@@ -40,3 +44,4 @@ public class User {
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
 }
+

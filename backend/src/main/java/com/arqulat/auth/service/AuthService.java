@@ -1,0 +1,102 @@
+package com.arqulat.auth.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.arqulat.auth.dto.AuthResponse;
+import com.arqulat.auth.dto.LoginRequest;
+import com.arqulat.auth.dto.RegisterRequest;
+import com.arqulat.auth.exception.ResourceNotFoundException;
+import com.arqulat.auth.exception.UserAlreadyExistsException;
+import com.arqulat.auth.model.User;
+import com.arqulat.auth.repository.UserRepository;
+import com.arqulat.auth.security.AppUserDetails;
+
+import jakarta.servlet.http.HttpServletResponse;
+
+@Service
+public class AuthService {
+
+	@Value("${app.cookie.domain}")
+	private String cookieDomain;
+
+	@Value("${app.cookie.max-age}")
+	private long cookieMaxAge;
+
+
+	@Autowired
+	UserRepository userRepository;
+
+	@Autowired
+	PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	AuthenticationManager authenticationManager;
+	
+	@Autowired
+	JwtService jwtService;
+	
+	public AuthResponse register(RegisterRequest request) {
+		if (userRepository.existsByEmail(request.getEmail())) {
+			throw new UserAlreadyExistsException("Email is already registered");
+		}
+		
+		User user = new User();
+		user.setEmail(request.getEmail());
+		user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+		user.setName(request.getName()); // optional, may be null
+		
+		User savedUser = userRepository.save(user);
+		
+		return new AuthResponse(savedUser.getId(), savedUser.getEmail(), savedUser.getName());
+	}
+
+	public AuthResponse login(LoginRequest request, HttpServletResponse response) {
+		
+		Authentication authentication = authenticationManager.authenticate(
+				new UsernamePasswordAuthenticationToken(
+						request.getEmail(), 
+						request.getPassword()
+		));
+		
+		AppUserDetails userDetails = (AppUserDetails)authentication.getPrincipal();
+		User user = userDetails.getUser();
+		
+		String jwtToken = jwtService.generateToken(userDetails);
+		
+		setJwtCookie(response, jwtToken, cookieMaxAge);
+		
+		return new AuthResponse(user.getId(), user.getEmail(), user.getName());
+	}
+
+	public AuthResponse getCurrentUser(String email) {
+		User user = userRepository.findByEmail(email)
+				.orElseThrow(() ->  new ResourceNotFoundException("User not found"));
+		
+		return new AuthResponse(user.getId(), user.getEmail(), user.getName());
+	}
+
+	public void logout(HttpServletResponse response) {
+		setJwtCookie(response, "", 0);
+	}
+	
+	private void setJwtCookie(HttpServletResponse response, String token, long maxAgeSeconds) {
+		ResponseCookie cookie = ResponseCookie.from("arqulat_session", token)
+				.domain(cookieDomain) // The leading dot ensures all subdomains (like Loom) can read it
+				.path("/")
+				.httpOnly(true)         // Protects against XSS attacks 
+				.secure(true)           // Forces HTTPS 
+				.sameSite("Lax")        // Protects against CSRF
+				.maxAge(maxAgeSeconds)
+				.build();
+				
+		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+	}
+}

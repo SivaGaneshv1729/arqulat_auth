@@ -1,0 +1,94 @@
+package com.arqulat.auth.security;
+
+import java.io.IOException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.arqulat.auth.model.User;
+import com.arqulat.auth.repository.UserRepository;
+import com.arqulat.auth.service.JwtService;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+	
+	@Autowired
+	UserRepository userRepository;
+	
+	@Autowired
+	JwtService jwtService;
+
+	@Value("${app.cookie.domain}")
+	private String cookieDomain;
+
+	@Value("${app.frontend.url}")
+	private String frontendUrl;
+
+	@Value("${app.cookie.max-age}")
+	private long cookieMaxAge;
+	
+	@Override
+	@Transactional
+	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+			Authentication authentication) throws IOException, ServletException {
+		
+		OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+		
+		String email = oAuth2User.getAttribute("email");
+		String googleId = oAuth2User.getAttribute("sub");
+		String name = oAuth2User.getAttribute("name");
+
+		// Guard against missing required OAuth2 attributes
+		if (email == null || googleId == null) {
+			getRedirectStrategy().sendRedirect(request, response, frontendUrl + "?error=oauth2_missing_attributes");
+			return;
+		}
+
+		// 1. Try to find by Google ID first (returning user via Google)
+		// 2. Fall back to email lookup (user registered via email/password — link accounts)
+		// 3. Otherwise create a new user
+		User user = userRepository.findByGoogleId(googleId)
+				.orElseGet(() -> userRepository.findByEmail(email)
+						.map(existingUser -> {
+							// Link the Google ID to the existing email/password account
+							existingUser.setGoogleId(googleId);
+							if (existingUser.getName() == null) existingUser.setName(name);
+							return userRepository.save(existingUser);
+						})
+						.orElseGet(() -> {
+							User newUser = new User();
+							newUser.setEmail(email);
+							newUser.setGoogleId(googleId);
+							newUser.setName(name);
+							return userRepository.save(newUser);
+						}));
+		
+		AppUserDetails userDetails = new AppUserDetails(user);
+		String jwtToken = jwtService.generateToken(userDetails);
+		
+		ResponseCookie cookie = ResponseCookie.from("arqulat_session", jwtToken)
+				.domain(cookieDomain)
+				.path("/")
+				.httpOnly(true)
+				.secure(true)
+				.sameSite("Lax")
+				.maxAge(cookieMaxAge) // 7 days by default
+				.build();
+		
+		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+		
+		getRedirectStrategy().sendRedirect(request, response, frontendUrl);
+	}
+}
+
