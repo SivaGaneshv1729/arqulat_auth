@@ -28,7 +28,7 @@ Tracked issues organized by severity. Updated as issues are resolved.
 | # | Issue | Details | Status |
 |---|---|---|---|
 | 6 | **Registration doesn't auto-login** | User must call `/login` after `/register` to get a JWT cookie. | ⏳ By design for now |
-| 7 | **`SessionCreationPolicy.IF_REQUIRED`** | Mixes stateful and stateless patterns. Should be `STATELESS` with stateless OAuth2 state storage. | ⏳ Required for OAuth2 flow |
+| 7 | **`SessionCreationPolicy.IF_REQUIRED`** | Mixes stateful and stateless patterns. Should be `STATELESS` with stateless OAuth2 state storage. when changing between arqulat to google oauth spring stores a variable `state` . custom class (an AuthorizationRequestRepository) | ⏳ Required for OAuth2 flow. when arqulat expanded to multiple server(1000's of users login/sec) this will be problem |
 | 8 | **`show-sql=true`** | Floods logs with SQL in production, potentially exposing user data in query parameters. | ⏳ Dev only — disable for production |
 | 9 | **`AppUserDetails` missing `serialVersionUID`** | Will break deserialization if the class changes and sessions are serialized. | ⏳ TODO |
 | 10 | **Google-only users cause 500 on `/login`** | `BCryptPasswordEncoder.matches(raw, null)` throws `IllegalArgumentException` instead of returning 401. | ⏳ TODO |
