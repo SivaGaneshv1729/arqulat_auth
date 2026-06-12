@@ -15,6 +15,7 @@ import com.arqulat.auth.dto.LoginRequest;
 import com.arqulat.auth.dto.RegisterRequest;
 import com.arqulat.auth.service.AuthService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
@@ -42,8 +43,8 @@ public class AuthController {
 	}
 	
 	@PostMapping("/api/v1/user/logout")
-	public ResponseEntity<String> logout(HttpServletResponse response) {
-		authService.logout(response);
+	public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
+		authService.logout(request, response);
 		return new ResponseEntity<>("Logged out successfully", HttpStatus.OK);
 	}
 }

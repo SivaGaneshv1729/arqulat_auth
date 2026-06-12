@@ -19,6 +19,12 @@ import com.arqulat.auth.model.User;
 import com.arqulat.auth.repository.UserRepository;
 import com.arqulat.auth.security.AppUserDetails;
 
+import java.util.Arrays;
+import java.util.Date;
+import com.arqulat.auth.model.BlacklistedToken;
+import com.arqulat.auth.repository.BlacklistedTokenRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Service
@@ -42,6 +48,9 @@ public class AuthService {
 	
 	@Autowired
 	JwtService jwtService;
+	
+	@Autowired
+	BlacklistedTokenRepository blacklistedTokenRepository;
 	
 	public AuthResponse register(RegisterRequest request) {
 		if (userRepository.existsByEmail(request.getEmail())) {
@@ -83,7 +92,27 @@ public class AuthService {
 		return new AuthResponse(user.getId(), user.getEmail(), user.getName());
 	}
 
-	public void logout(HttpServletResponse response) {
+	public void logout(HttpServletRequest request, HttpServletResponse response) {
+		if (request.getCookies() != null) {
+            Arrays.stream(request.getCookies())
+                    .filter(cookie -> "arqulat_session".equals(cookie.getName()))
+                    .findFirst()
+                    .ifPresent(cookie -> {
+                        String token = cookie.getValue();
+                        try {
+                            String jti = jwtService.extractJti(token);
+                            Date expiration = jwtService.extractExpiration(token);
+                            if (jti != null && expiration != null && !blacklistedTokenRepository.existsByJti(jti)) {
+                                BlacklistedToken blacklistedToken = new BlacklistedToken();
+                                blacklistedToken.setJti(jti);
+                                blacklistedToken.setExpiresAt(expiration);
+                                blacklistedTokenRepository.save(blacklistedToken);
+                            }
+                        } catch (Exception e) {
+                            // Token might already be expired or invalid, ignore
+                        }
+                    });
+        }
 		setJwtCookie(response, "", 0);
 	}
 	
