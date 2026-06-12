@@ -3,13 +3,15 @@ package com.arqulat.auth.security;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.jspecify.annotations.Nullable;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.arqulat.auth.model.User;
 
 public class AppUserDetails implements UserDetails{
+
+	private static final long serialVersionUID = 1L;
 
 	private User user;
 	
@@ -23,8 +25,9 @@ public class AppUserDetails implements UserDetails{
 	}
 
 	@Override
-	public @Nullable String getPassword() {
-		return user.getPasswordHash();
+	public String getPassword() {
+		String passwordHash = user.getPasswordHash();
+		return passwordHash != null ? passwordHash : "";
 	}
 
 	@Override
