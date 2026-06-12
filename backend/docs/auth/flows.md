@@ -190,6 +190,7 @@ Client                     JwtAuthFilter        JwtService       UserDetailsServ
   │                             │                    │                  │                     │
   │                             │ isTokenValid()     │                  │                     │
   │                             │───────────────────▶│                  │                     │
+  │                             │ [checks JTI against BlacklistedTokenRepository]             │
   │                             │◀───────────────────│                  │                     │
   │                             │                    │                  │                     │
   │                             │ setAuthentication(userDetails)       │                     │
@@ -207,7 +208,7 @@ Client                     JwtAuthFilter        JwtService       UserDetailsServ
 4. If extraction fails (expired, malformed, invalid signature) → the exception is caught silently, and the user remains **unauthenticated** (no 401 thrown at this stage).
 5. If a valid username is extracted AND no authentication exists in the current `SecurityContext`:
    - Loads `AppUserDetails` from the database via `AppUserDetailsService`.
-   - Calls `jwtService.isTokenValid(token, userDetails)` — checks username match AND expiry.
+   - Calls `jwtService.isTokenValid(token, userDetails)` — checks username match, expiry, AND verifies the token's JTI is not in the `blacklisted_tokens` table.
    - If valid → sets a `UsernamePasswordAuthenticationToken` in the `SecurityContext`.
 6. The filter chain continues. If the endpoint requires authentication and the `SecurityContext` has no authentication → Spring returns `401 Unauthorized`.
 
@@ -221,9 +222,10 @@ POST /api/v1/user/logout
 
 ### What Happens
 
-1. `AuthService.logout()` calls `setJwtCookie(response, "", 0)`.
-2. This sets the `arqulat_session` cookie to an empty string with `maxAge=0`.
-3. The browser deletes the cookie immediately.
-4. Returns `200 OK` with `"Logged out successfully"`.
-
-> **Important:** The JWT itself is NOT invalidated server-side. If the token was intercepted before logout, it remains valid until its natural expiry (7 days). See [Known Issues](../known-issues.md) for details.
+1. The client sends a request to `/api/v1/user/logout`.
+2. `AuthService.logout()` inspects the request cookies to find the `arqulat_session` JWT.
+3. If found, the token's unique ID (`jti`) and expiration date are extracted.
+4. The `jti` is inserted into the `blacklisted_tokens` table to permanently invalidate it server-side.
+5. `setJwtCookie(response, "", 0)` is called, which sets the `arqulat_session` cookie to an empty string with `maxAge=0`.
+6. The browser deletes the cookie immediately.
+7. Returns `200 OK` with `"Logged out successfully"`.
