@@ -17,7 +17,7 @@ Tracked issues organized by severity. Updated as issues are resolved.
 
 | # | Issue | Details | Status |
 |---|---|---|---|
-| 3 | **JWTs not revoked on logout** | Clearing the cookie doesn't invalidate the token server-side. Stolen tokens remain valid for up to 7 days. | ⏳ TODO — Needs token blacklist (Redis + JTI claim) |
+| 3 | ~~**JWTs not revoked on logout**~~ | ~~Clearing the cookie doesn't invalidate the token server-side. Stolen tokens remain valid for up to 7 days.~~ | ✅ Resolved — Implemented database token blacklist storing JTIs |
 | 4 | **No rate limiting** | Auth endpoints are vulnerable to brute-force and registration flooding. | ⏳ TODO — Add Bucket4j or API gateway rate limiting |
 | 5 | **CSRF disabled with cookie-based auth** | `SameSite=Lax` provides partial protection but doesn't cover all attack vectors. | ⏳ Accepted risk with SameSite |
 
@@ -52,4 +52,4 @@ Tracked issues organized by severity. Updated as issues are resolved.
 | Date | Issue # | Action Taken |
 |---|---|---|
 | 2026-06-11 | — | Password validation added (`@Pattern` regex on `RegisterRequest.password`) |
-| | | _Future entries will be added as issues are resolved_ |
+| 2026-06-12 | 3 | Implemented database-backed JWT blacklist using JTI claims to ensure tokens are securely invalidated on logout. |
