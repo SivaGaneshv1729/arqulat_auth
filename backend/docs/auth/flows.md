@@ -100,6 +100,7 @@ Client                   AuthController      AuthService      AuthenticationMana
 4. The `AuthenticationManager` uses `AppUserDetailsService.loadUserByUsername(email)` to fetch the user from the DB.
 5. It then compares the raw password against the BCrypt hash via `BCryptPasswordEncoder.matches()`.
 6. If credentials are invalid → `BadCredentialsException` → 401 Unauthorized.
+   - **Edge Case:** If the user originally signed up via Google OAuth, they don't have a password in the database. When they try to log in here, `AppUserDetails` returns an empty string `""` to the password encoder. The encoder safely rejects it, resulting in a normal 401 Unauthorized error instead of a server crash.
 7. On success, a JWT is generated and set as an `arqulat_session` HttpOnly cookie.
 8. Returns `200 OK` with user profile.
 
