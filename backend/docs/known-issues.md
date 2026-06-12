@@ -9,7 +9,7 @@ Tracked issues organized by severity. Updated as issues are resolved.
 | # | Issue | Details | Status |
 |---|---|---|---|
 | 1 | **Pre-account takeover via OAuth linking** | Without email verification, an attacker can register with a victim's email, and when the victim later logs in via Google, the accounts merge. The attacker retains access via the known password. | ⏳ Mitigated by plan to disable password registration; fully fixed when OTP verification is added |
-| 2 | **`ddl-auto=update` in production** | Hibernate auto-modifying the schema risks data corruption. Can silently add columns, widen types, and never drops constraints. | ⏳ Acceptable for development. Use Flyway/Liquibase + `ddl-auto=validate` for production |
+| 2 | ~~**`ddl-auto=update` in production**~~ | ~~Hibernate auto-modifying the schema risks data corruption. Can silently add columns, widen types, and never drops constraints.~~ | ✅ Resolved — Switched to Flyway migrations and `ddl-auto=validate` |
 
 ---
 
@@ -55,3 +55,4 @@ Tracked issues organized by severity. Updated as issues are resolved.
 | 2026-06-12 | 3 | Implemented database-backed JWT blacklist using JTI claims to ensure tokens are securely invalidated on logout. |
 | 2026-06-12 | 9 | Added `serialVersionUID` to `AppUserDetails` class. |
 | 2026-06-12 | 10 | Updated `AppUserDetails.getPassword()` to return empty string instead of null, preventing `IllegalArgumentException` in `BCryptPasswordEncoder`. |
+| 2026-06-12 | 2 | Implemented Flyway database migrations and switched `ddl-auto` to `validate` for production deployment. |
